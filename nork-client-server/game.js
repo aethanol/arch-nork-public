@@ -41,28 +41,37 @@ class Game {
     
     go(direction) {
         if (this._currRoom.exits[direction] !== undefined) {
-            this._currRoom = this.findRoom(this._currRoom.exits[direction].id);
-            return this._currRoom.description;
+            // go to that room
+            this.goto(this._currRoom.exits[direction].id);
+            return this.brief();
          // if the direction is not valid print error
         } else {
-            return "you can't go that way";
+            return "you can't go thast way";
         } 
         
     }
-    
-    // helper function to loop through rooms and find the right room
-    findRoom(id) {
+
+    // helper function to loop through rooms and goto the right room
+    goto(id) {
         for(var i = 0; i < world.rooms.length; i++){
            
             if(world.rooms[i].id === id){
-                return world.rooms[i];
+                this._currRoom = world.rooms[i];
             }
         }
     }
     
+    
+    
     take(item) {
-        var roomIndex = this._currRoom.items.indexOf(item);
-        var invIndex = this._inventory.indexOf(item);
+        try{
+            var roomIndex = this._currRoom.items.indexOf(item);
+            var invIndex = this._inventory.indexOf(item);
+        }
+        catch(e){
+            return "you can't take that!";
+        }
+        
         // if index == -1 then that room does not contain item
         // also check that you don't already have item
         if(roomIndex !== -1 && invIndex === -1){
@@ -71,17 +80,47 @@ class Game {
         } else {
             return "you can't take that!";
         }
-        // if(this._currRoom['items'].includes(item)){
-        //     //this._inventory.push(item);
-        //     
-        // } else {
-        //     
-        // }
         
     }
     
     use(item) {
+        // get index of item, -1 if not
+        var invIndex = this._inventory.indexOf(item);
         
+        // first check if we have that item
+        if(invIndex !== -1){
+            // then check if the room you're in matches the uses
+            try{
+                var use = this.useCase(item);
+                var desc = use.description;
+                this.goto(use.effect.goto);
+                desc += '\n' + this.brief();
+                return desc;
+            }
+            catch(e){
+                return "you can't use that here!";
+            }
+                   
+        } else {
+            return "you don't have that!";
+        }
+    }
+    
+    // find if used item has use in current room
+    // as the current world.json file is set up we don't need this
+    // but in the future with multiple use cases, this will be helpful
+    useCase(item){
+        // loop through rooms uses
+        for(var i = 0; i < this._currRoom.uses.length; i++){
+            if(this._currRoom.uses[i].item === item){
+                return this._currRoom.uses[i];
+            }
+            
+        }
+    }
+    
+    brief(){
+        return this._currRoom.description;
     }
     
     inventory(){
@@ -91,6 +130,7 @@ class Game {
         }
         return 'You have:' + inv;
     }
+    
        
 }
 
