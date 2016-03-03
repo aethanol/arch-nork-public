@@ -11,10 +11,12 @@ class Peer {
         this._host = '127.0.0.1'
         this.connectionString = this._host + ":" + this._port;
         this._server = net.createServer(); //create socket server
-        this._swarm = [];
-        this._connections = [];
+        this._swarm = {};
+        this._connections = {};
+        this._history = {};
         Peer.prototype.__proto__ = events.EventEmitter.prototype;
         events.EventEmitter.call(this);
+        this._swarmUpdater = setInterval(this._update, 120000, true, this);
         // this._emitter = new events.EventEmitter();
         // this._request = serverBehavior;
         // this._process = clientBehavior;
@@ -24,31 +26,95 @@ class Peer {
         var self = this;
         this.server.listen(this._port, function(){
              self.addr = self.server.address();
-            console.log('server listening on port %d', self.addr.port);
+            // console.log('server listening on port %d', self.addr.port);
         });
 
         this.server.on('connection', function(socket) {
-            console.log("a peer has connected.");
+            // console.log("a peer has connected.");
             // socket.write('connected: ' + socket.remoteAddress +':'+ socket.remotePort +'\n');
-            self._initSocket(socket);
+            self._initSocket(socket, false);
         });
     }
 
-    connect(peer) {
-        //connect to a peer
+    // sets the event listeners on the socket
+    _initSocket(socket, reconnecting) {
+        var self = this;
+        socket.on('data', function(data) {
+            self._process(data, socket);
+        });
+        socket.on('close', function(){
+            // console.log('a peer has closed the connection');
+            // console.log("number of current connections: " + Object.keys(self._connections).length);
+
+            self._findPeerBySocket(this).then(function(peer){
+                if(peer !== false) {
+                    // maybe dont remove from swarm so on next swarm refresh we can attempt to reconnect to peer
+                    if(reconnecting) {
+                        self._removeFromSwarm(peer);
+                    }
+                    self._removeConnection(peer);
+                    // console.log("peer " + peer.username + " removed successfully");
+                    // console.log("number of current connections: " + Object.keys(self._connections).length);
+                    socket.end();
+                } else {
+                    // console.log('could not find peer by socket');
+                    // console.log(self._connections);
+                }
+            });
+
+            // process.exit(0);
+        });
+        socket.on('error', function(error){
+            // console.log(error);
+            // console.log(this);
+            var peer = {
+                connectionString: error.address + ":" + error.port,
+                port: error.port,
+                host: error.address
+            };
+            if(reconnecting) {
+                self._removeFromSwarm(peer);
+                self._removeConnection(peer);
+                socket.end();
+            }
+
+            // self._findPeerBySocket(this).then(function(peer){
+            //     if(peer !== false) {
+            //         // maybe dont remove from swarm so on next swarm refresh we can attempt to reconnect to peer
+            //         if(reconnecting) {
+            //             self._removeFromSwarm(peer);
+            //         }
+            //         self._removeConnection(peer);
+            //         // console.log("peer " + peer.username + " removed successfully");
+            //         // console.log("number of current connections: " + Object.keys(self._connections).length);
+            //         socket.end();
+            //     } else {
+            //         console.log('could not find peer by socket');
+            //         // console.log(self._connections);
+            //     }
+            // });
+        });
+    }
+
+    //connect to a peer
+    connect(peer, reconnecting) {
+        if (reconnecting === undefined) {
+            reconnecting = false;
+        }
         var socket = new net.Socket();
         var self = this;
         socket.connect(peer.port, peer.host, function() {
-            console.log('Connected to: ' + peer.host + ':' + peer.port);
-            if(self._addToSwarm(peer)){
-                peer.socket = socket;
-                self._addConnection(peer);
-            }
+            // console.log('Connected to: ' + peer.host + ':' + peer.port);
+            self._addToSwarm(peer)
+            peer.socket = socket;
+            self._addConnection(peer);
+            self._addToHistory(peer);
 
             var credentials = {
                 username: self._name,
                 host: self._host,
-                port: self._port
+                port: self._port,
+                connectionString: self._host + ":" + self._port
             }
 
             var message = {
@@ -60,9 +126,10 @@ class Peer {
                 socket.write(JSON.stringify({command: 'getSwarm', data: ''}));
             }, 100);
         });
-        this._initSocket(socket);
+        this._initSocket(socket, reconnecting);
     }
 
+    // proccess data from a socket
     _process(data, socket) {
         var line = data.toString().trim();
         line = JSON.parse(line);
@@ -70,16 +137,17 @@ class Peer {
         var lineData = line.data;
 
         if(command === 'exit'){
-            console.log('disconnected');
+            // console.log('disconnected');
             socket.end();
         }else if (command === 'add') {
             var peer = lineData;
-            console.log(peer);
-            if(this._addToSwarm(peer)) {
+            if(this._addToSwarm(peer) || !(peer.connectionString in this._connections)) {
                 peer.socket = socket;
+                this._addToHistory(peer);
                 if(this._addConnection(peer)) {
-                    console.log("peer " + peer.username + " added successfully");
-                    console.log("swarm length: " + this._swarm.length);
+
+                    // console.log("peer " + peer.username + " added successfully");
+                    // console.log("swarm length: " + Object.keys(this._swarm).length);
                 }
             } else {
                 // we already have a connection no duplicates please
@@ -90,15 +158,22 @@ class Peer {
             socket.end();
         } else if (command === 'giveSwarm'){
             this._mergeSwarms(lineData);
+            this._connectToSwarm(false);
             // socket.write(JSON.stringify(message));
         } else if (command === 'getSwarm'){
-            console.log('giving peer the swarm');
+            // console.log('giving peer the swarm');
             var message = {
                 command: "giveSwarm",
                 data: this.swarm
             };
-            console.log(message);
-            message = JSON.stringify(message);
+            // console.log(message);
+            message = JSON.stringify(message, function(key, value){
+                if(key == 'socket') {
+                    return undefined;
+                } else {
+                    return value;
+                }
+            });
             socket.write(message);
         } else if (command === 'game') {
             // INTERACT with game here
@@ -114,15 +189,32 @@ class Peer {
         }
     }
 
-    _mergeSwarms(swarm) {
-        var newSwarm = cleanSelf(arrayUnique(this.swarm.concat(swarm)), this);
+    _update(reconnecting, self) {
+        console.log('updating');
+        self._connectToSwarm(reconnecting);
+    }
 
-        console.log(newSwarm);
+
+    _mergeSwarms(swarm) {
+        var newSwarm = extend(this._swarm, swarm);
+        delete newSwarm[this.connectionString];
+        // console.log(newSwarm);
         this._swarm = newSwarm;
     }
 
-    _checkConnections() {
+    _connectToSwarm(reconnecting) {
+        // console.log("checking " + Object.keys(this._swarm).length + " peers in swarm");
+        // console.log(this._swarm);
+        Object.keys(this._swarm).forEach(function(key) {
+            var swarmString = this._swarm[key].connectionString;
+            // console.log(swarmString);
+            if(!(swarmString in this._connections)) {
 
+                this.connect(this._swarm[key], reconnecting);
+            } else {
+                // console.log('not connecting');
+            }
+        }, this);
     }
 
     broadcast(msg) {
@@ -132,6 +224,11 @@ class Peer {
     close() {
         console.log("disconnecting");
         this._distributeMessage('remove', '');
+        clearInterval(this._swarmUpdater);
+        this._server.close();
+        Object.keys(this._connections).forEach(function(key) {
+            this._connections[key].socket.end();
+        }, this);
     }
 
     _distributeMessage(command, msg) {
@@ -140,10 +237,10 @@ class Peer {
             data: msg
         }
         message = JSON.stringify(message);
-        for (var i = 0; i < this._connections.length; i++) {
-            var socket = this._connections[i].socket;
+        Object.keys(this._connections).forEach(function(key) {
+            var socket = this._connections[key].socket;
             socket.write(message);
-        }
+        }, this);
     }
 
 
@@ -153,33 +250,6 @@ class Peer {
             data: msg
         }
         socket.write(JSON.stringify(message));
-    }
-
-    // sets the event listeners on the socket
-    _initSocket(socket) {
-        var self = this;
-        socket.on('data', function(data) {
-            self._process(data, socket);
-        });
-        socket.on('close', function(){
-            console.log('a peer has closed the connection');
-            console.log("number of current connections: " + self._connections.length);
-
-            var peer = self._findPeerBySocket(this);
-            if(peer !== false) {
-                // maybe dont remove from swarm so on next swarm refresh we can attempt to reconnect to peer
-                // self._removeFromSwarm(peer);
-                self._removeConnection(peer);
-                socket.end();
-                console.log("peer " + peer.username + " removed successfully");
-                console.log("number of current connections: " + self._connections.length);
-
-            } else {
-                console.log('could not find peer by socket');
-                console.log(self._connections);
-            }
-            // process.exit(0);
-        });
     }
 
     get swarm() {
@@ -204,59 +274,76 @@ class Peer {
 
     // finds a peer by their socket
     _findPeerBySocket(socket) {
-        for (var i = 0; i < this._connections.length; i++) {
-            if (this._connections[i].socket === socket) {
-                return this._connections[i];
-            }
-        }
-        return false;
+        var self = this;
+        var promise = new Promise(function(resolve, reject) {
+            Object.keys(self._history).forEach(function(key, index) {
+                if (self._history[key].socket === socket) {
+                    resolve(self._history[key]);
+                } else {
+                    if(index === Object.keys(self._history).length -1) {
+                        resolve(false);
+                    }
+                }
+            }, this);
+        });
+
+        return promise;
     }
 
     // adds a peer to your swarm
     _addToSwarm(peer) {
-        var copy = clone(peer, true, 1);
-        delete copy.socket;
-        if(this.swarm.indexOf(copy) === -1) {
-            this.swarm.push(copy);
-            this.swarm = arrayUnique(this.swarm);
+        if(!(peer.connectionString in this.swarm)) {
+            this.swarm[peer.connectionString] = peer;
             return true;
         } else {
-            console.log("peer is already in swarm");
+            // console.log("peer is already in swarm");
             return false;
         }
     }
 
     // remove a peer from your swarm. This is done during swarm update
     _removeFromSwarm(peer) {
-        var index = this.swarm.indexOf(peer);
-        if(index !== -1) {
-            this.swarm.splice(index, 1);
+        if(peer.connectionString in this.swarm) {
+            delete this.swarm[peer.connectionString];
             return true;
         } else {
-            console.log("peer was not in swarm");
+            // console.log("peer was not in swarm");
             return false;
         }
     }
 
     // adds a peer to your connections list
     _addConnection(connection) {
-        if(this._connections.indexOf(connection) === -1) {
-            this._connections.push(connection);
+        if(!(connection.connectionString in this._connections)) {
+            this._connections[connection.connectionString ] = connection;
             return true;
         } else {
-            console.log("peer is already connected to you close the connection");
+            // redunadncy in case the off case the client doesnt realize that it already holds a connect
+            // console.log("peer is already connected to you, close the connection");
             return false;
         }
     }
 
     // removes a peer from your connections list
     _removeConnection(connection) {
-        var index = this._connections.indexOf(connection);
-        if(index !== -1) {
-            this._connections.splice(index, 1);
+        if(connection.connectionString in this._connections) {
+            delete this._connections[connection.connectionString];
             return true;
         } else {
-            console.log("peer was not in our connections");
+            // redunadncy in case the off case the client doesnt realize that it already holds a connect
+            // console.log("peer was not in our connections");
+            return false;
+        }
+    }
+
+    // adds a peer to the historical list
+    _addToHistory(peer) {
+        var copy = clone(peer);
+        if(!(peer.connectionString in this._history)) {
+            this._history[peer.connectionString] = peer;
+            return true;
+        } else {
+            // console.log("peer is already in history");
             return false;
         }
     }
@@ -264,57 +351,7 @@ class Peer {
 
 module.exports.Peer = Peer;
 
-function arrayUnique(array) {
-    var a = array.concat();
-    for(var i=0; i<a.length; ++i) {
-        for(var j=i+1; j<a.length; ++j) {
-            var iConString = a[i].host + ":" + a[i].port;
-            var jConString = a[j].host + ":" + a[j].port;
-            if(iConString === jConString)
-                a.splice(j--, 1);
-        }
-    }
-
-    return a;
+function extend(obj, src) {
+    Object.keys(src).forEach(function(key) { obj[key] = src[key]; });
+    return obj;
 }
-
-function cleanSelf(array, peer) {
-    var a = array.concat();
-    for(var i=0; i<a.length; ++i) {
-        var iConString = a[i].host + ":" + a[i].port;
-        var myConString = peer.connectionString;
-        if(iConString === myConString)
-            a.splice(i--, 1);
-    }
-    return a
-}
-
-function cleanSwarm(array) {
-        var tmp = array.concat();
-        for (var i = 0; i <  array.length; i++) {
-            tmp.push({
-                username: array[i].username,
-                host: array[i].host,
-                port: array[i].port
-            });
-        }
-        return tmp;
-}
-
-function cloneObject(obj) {
-    if (obj === null || typeof obj !== 'object') {
-        return obj;
-    }
-
-    var temp = obj.constructor(); // give temp the original obj's constructor
-    for (var key in obj) {
-            temp[key] = cloneObject(obj[key]);
-    }
-
-    return temp;
-}
-
-var bob = {
-    name: "Bob",
-    age: 32
-};

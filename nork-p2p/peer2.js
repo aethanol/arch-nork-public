@@ -4,12 +4,16 @@ var Peer = require('./peer.js');
 var tracker = {
     username: 'Nork Tracker',
     host: '127.0.0.1',
-    port: 3000
+    port: 3000,
+    connectionString: '127.0.0.1:3000'
 }
 
 var peer2 = new Peer.Peer('peer2', 3002);
 peer2.start();
 peer2.connect(tracker);
+setTimeout(function() {
+    peer2.broadcast("hello world");
+}, 2000);
 setTimeout(function() {
     peer2.close();
 }, 5000);

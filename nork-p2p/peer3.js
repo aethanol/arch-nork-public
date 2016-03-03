@@ -8,6 +8,9 @@ var tracker = {
     connectionString: '127.0.0.1:3000'
 }
 
-var peer1 = new Peer.Peer('peer1', 3001);
-peer1.start();
-peer1.connect(tracker);
+var peer3 = new Peer.Peer('peer3', 3003);
+peer3.start();
+peer3.connect(tracker);
+// setTimeout(function() {
+//     peer3.close();
+// }, 5000);
