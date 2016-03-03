@@ -2,6 +2,7 @@
 var Peer = require('./peer.js');
 //TRACKER TO INTIALIZE SWARM
 var tracker = {
+    username: 'Nork Tracker',
     host: '127.0.0.1',
     port: 3000
 }
