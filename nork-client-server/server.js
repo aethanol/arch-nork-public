@@ -14,7 +14,10 @@ server.on('connection', function(socket) {
     socket.write('connected on: ' + socket.remoteAddress +':'+ socket.remotePort +'\n');
     socket.write('starting game \n');
     // invoke game kick off method
+    
     socket.write(game.play());
+    
+    
     
     // handle data events by interacting with the game logic
     socket.on('data', function(data) {
@@ -22,8 +25,18 @@ server.on('connection', function(socket) {
         var input = data.toString().toLowerCase();
         
         //call input() on the game logic
-        // and output to the socket what the game returns    
+        // and output to the socket what the game returns     
         socket.write(game.input(input));
+        
+        // then check endgame and exit
+        // set a timer of 100 ms because async function calls -- "reasons"
+        setTimeout(function(){
+            if(game.status !== undefined){
+                process.exit(0);
+            }
+        }, 100);
+        
+        
 
     });
     
@@ -31,7 +44,7 @@ server.on('connection', function(socket) {
     socket.on('close', function(){
         console.log('client disconnected');
         console.log('closing server');
-        process.exit(0);
+        server.close();
     });
 });
                             
