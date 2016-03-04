@@ -1,7 +1,4 @@
 'use strict';
-var Peer = require('./peer.js');
-//TRACKER TO INTIALIZE SWARM
+var Game = require('./game.js');
 
-
-var tracker = new Peer.Peer('Nork Tracker', 3000);
-tracker.start();
+var game = new Game.Game();
