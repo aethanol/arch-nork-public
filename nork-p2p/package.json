@@ -1,0 +1,15 @@
+{
+  "name": "Nork2Nork",
+  "version": "1.0.0",
+  "description": "A simple text adventure played over a p2p network",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "peer": "node peer.js"
+  },
+  "author": "William Menten-Weil",
+  "license": "ISC",
+  "dependencies": {
+    "p2p-node": "^0.1.1"
+  }
+}
