@@ -5,9 +5,10 @@ const events = require('events');
 var clone = require('clone');
 
 class Peer {
-    constructor(name, port){
+    constructor(name, port, game){
         this._name = name;
         this._port = port;
+        this.game = game;
         this._host = '127.0.0.1'
         this.connectionString = this._host + ":" + this._port;
         this._server = net.createServer(); //create socket server
@@ -141,13 +142,14 @@ class Peer {
             socket.end();
         }else if (command === 'add') {
             var peer = lineData;
-            if(this._addToSwarm(peer) || !(peer.connectionString in this._connections)) {
-                peer.socket = socket;
-                this._addToHistory(peer);
-                if(this._addConnection(peer)) {
-
-                    // console.log("peer " + peer.username + " added successfully");
-                    // console.log("swarm length: " + Object.keys(this._swarm).length);
+            if(!(peer.connectionString in this._connections)) {
+                if(this._addToSwarm(peer)) {
+                    peer.socket = socket;
+                    this._addToHistory(peer);
+                    if(this._addConnection(peer)) {
+                        // console.log("peer " + peer.username + " added successfully");
+                        // console.log("swarm length: " + Object.keys(this._swarm).length);
+                    }
                 }
             } else {
                 // we already have a connection no duplicates please
@@ -179,7 +181,7 @@ class Peer {
             // INTERACT with game here
             // this is an incoming game broadcast
             // to send a message to the other gamers use the broadcast function below
-            console.log("got message: " + lineData);
+            // console.log("got message: " + lineData);
             this.emit('message', lineData, socket);
 
         } else {
@@ -190,7 +192,7 @@ class Peer {
     }
 
     _update(reconnecting, self) {
-        console.log('updating');
+        // console.log('updating');
         self._connectToSwarm(reconnecting);
     }
 
@@ -217,10 +219,12 @@ class Peer {
         }, this);
     }
 
+    //distirbute a game message to all peers
     broadcast(msg) {
         this._distributeMessage('game', msg);
     }
 
+    // tell all peer to remove you from their connections, then remove the updater and close out our server and connections
     close() {
         console.log("disconnecting");
         this._distributeMessage('remove', '');
@@ -231,6 +235,7 @@ class Peer {
         }, this);
     }
 
+    // send any command to all peers
     _distributeMessage(command, msg) {
         var message = {
             command: command,
@@ -243,7 +248,7 @@ class Peer {
         }, this);
     }
 
-
+    // send a game message to any socket
     directMessage(socket, msg) {
         var message = {
             command: 'game',
@@ -296,8 +301,13 @@ class Peer {
             this.swarm[peer.connectionString] = peer;
             return true;
         } else {
+            if(this.swarm[peer.connectionString].socket !== peer.socket) {
+                this.swarm[peer.connectionString].socket = peer.socket;
+                return true;
+            } else {
+                return false;
+            }
             // console.log("peer is already in swarm");
-            return false;
         }
     }
 
