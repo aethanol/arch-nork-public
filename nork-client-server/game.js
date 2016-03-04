@@ -60,7 +60,7 @@ class Game {
             return this.brief();
          // if the direction is not valid print error
         } else {
-            return "you can't go thast way";
+            return "you can't go that way!";
         } 
         
     }
