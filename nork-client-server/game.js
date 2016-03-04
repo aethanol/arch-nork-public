@@ -4,11 +4,10 @@ const world = require('../common/world.json');
 
 class Game {
     
-    constructor() {
-        
+    constructor(){
         this._currRoom = world.rooms[0]; // initialize current room
         this._inventory = [];
-       
+        this._status = undefined;
     }
     
     play() {
@@ -18,25 +17,40 @@ class Game {
     
     // method to parse user input and invoke proper function
     input(input) {
+        
         // parse text to lowercase and split text by spaces to string array
         var text = input.toLowerCase().split(' ');
+        var cond = '';
         
         switch(text[0]){
         case 'go' :
-            return this.go(text[1]);
+            cond = this.go(text[1]);
+            break;
         case 'use' :
-            return this.use(text[1]);
+            cond = this.use(text[1]);
+            break;
         case 'take' :
-            return this.take(text[1]);
+            cond = this.take(text[1]);
+            break;
         case 'drop' :
-            return this.drop(text[1]);
+            cond = this.drop(text[1]);
+            break;
         case 'inventory' :
-            return this.inventory();
+            cond = this.inventory();
+            break;
         case 'brief' :
-            return this.brief();
+            cond = this.brief();
+            break;
         default :   
-            return 'That command was not understood'; 
+            cond = 'That command was not understood'; 
         }
+        // then check if that move was a win condition
+        if(this.status !== undefined){
+            cond += '\nyou ' + this.status + '!';
+        }
+       
+        
+        return cond;
     }
     
     go(direction) {
@@ -54,17 +68,29 @@ class Game {
     // helper function to loop through rooms and goto the right room
     goto(id) {
         for(var i = 0; i < world.rooms.length; i++){
-           
+            //if the current room matches passed id, change rooms
             if(world.rooms[i].id === id){
                 this._currRoom = world.rooms[i];
+                // then check if that was a win or lose
+                this.winLose();
             }
         }
     }
     
+    get status(){
+        return this._status;
+    }
     
+    // check if the current room has a status, and set the current status
+    winLose() {
+        if(this._currRoom.hasOwnProperty('status')){
+            this._status = this._currRoom.status;
+        }
+    }
     
     take(item) {
         try{
+            // use index of to return the index of the item in inventory and the room
             var roomIndex = this._currRoom.items.indexOf(item);
             var invIndex = this._inventory.indexOf(item);
         }
@@ -119,10 +145,12 @@ class Game {
         }
     }
     
+    // return current room description
     brief(){
         return this._currRoom.description;
     }
     
+    // return the list of items you posess
     inventory(){
         var inv = '';
         for(var i = 0; i < this._inventory.length; i++){
