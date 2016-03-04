@@ -11,7 +11,7 @@
     "type": "git",
     "url": "git+https://github.com/aethanol/arch-nork.git"
   },
-  "author": "Ethan Anderson",
+  "author": "Ethan Anderson, William Menten-Weil",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/aethanol/arch-nork/issues"

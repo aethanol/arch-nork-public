@@ -6,7 +6,7 @@ The below questions should be answered (in detail!) regarding your submission!
 
 
 ##### 1. Did you work with a partner? If so, who?
-> Answer goes here!
+> Liam and Ethan were partners for arch-nork.
 
 
 
@@ -17,21 +17,21 @@ The below questions should be answered (in detail!) regarding your submission!
 
 
 ##### 3. Did you add an extra features to either version of your game? If so, what?
-> Answer goes here!
+> We implemented the nork game with a peer to peer architecture, in order to illustrate the action of having multiple peers connecting to eachother without a centralized server we created a messaging system in which a peer can directly transmit to targeted peers, or a global messaging system that messages every peer in the swarm.
 
 
 
 ##### 4. Approximately how many hours did it take you to complete this assignment? #####
-> Answer goes here!
+> We each spent approximately 
 
 
 
 ##### 5. Did you receive help from any other sources (classmates, etc)? If so, please list who (be specific!). #####
-> Answer goes here!
+> 
 
 
 
 ##### 6. Did you encounter any problems in this assignment we should warn students about in the future? How can we make the assignment better? #####
-> Answer goes here!
+> Not particularly!
 
 

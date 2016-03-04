@@ -7,9 +7,14 @@
     "start": "node index.js",
     "peer": "node peer.js"
   },
-  "author": "William Menten-Weil",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aethanol/arch-nork.git"
+  },
+  "author": "William Menten-Weil, Ethan Anderson",
   "license": "ISC",
   "dependencies": {
     "p2p-node": "^0.1.1"
-  }
+  },
+   "homepage": "https://github.com/aethanol/arch-nork#readme"
 }
