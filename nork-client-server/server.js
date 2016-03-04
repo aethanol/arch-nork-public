@@ -32,7 +32,7 @@ server.on('connection', function(socket) {
         // set a timer of 100 ms because async function calls -- "reasons"
         setTimeout(function(){
             if(game.status !== undefined){
-                process.exit(0);
+                server.close();
             }
         }, 100);
         
