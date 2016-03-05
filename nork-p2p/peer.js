@@ -153,7 +153,7 @@ class Peer {
                 }
             } else {
                 // we already have a connection no duplicates please
-                console.log("duplicate connection");
+                // console.log("duplicate connection");
                 socket.end();
             }
         } else if (command === 'remove') {
