@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "peer": "node peer.js"
+    "tracker": "node tracker.js"
   },
   "repository": {
     "type": "git",
@@ -13,8 +13,6 @@
   },
   "author": "William Menten-Weil, Ethan Anderson",
   "license": "ISC",
-  "dependencies": {
-    "p2p-node": "^0.1.1"
-  },
+  "dependencies": {},
    "homepage": "https://github.com/aethanol/arch-nork#readme"
 }
