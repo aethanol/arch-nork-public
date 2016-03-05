@@ -33,7 +33,7 @@ class Game {
     }
 
     start() {
-        return "Welcome to the Nork peer to peer game. \n Start the game by using the command - connect 'username' 'port' \n";
+        return "Welcome to the Nork peer to peer game. \n Start the game by using the command - connect <username> <port> \n";
     }
 
     play() {

@@ -4,6 +4,10 @@ This repository contains two versions of a simple text-based game called Nork, d
 
 The below questions should be answered (in detail!) regarding your submission!
 
+##### NOTICE
+>  If you want to use the peer to peer game, you can run the demo file which creates the tracker and three peers in the same console. This can be a little confusing to watch because there are three copies of the game updating at the same time.
+> You can also play by starting the tracker.js and then running copies of index.js (the game) in multiple terminal windows.
+
 
 ##### 1. Did you work with a partner? If so, who?
 > Liam (William Menten-Weil) and Ethan (Ethan Anderson) were partners for arch-nork.
