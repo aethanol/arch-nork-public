@@ -44,6 +44,12 @@ class GameInterface {
         return true;
     }
 
+    alert(msg) {
+        console.log("ALERT - " + msg.username + ": " + msg.message);
+        // return true;
+    }
+
+
     _printChatbox(num) {
         for(var i = this._chatlog.length - (num - 1); i < this._chatlog.length; i++) {
             if (i>=0) {
@@ -51,6 +57,12 @@ class GameInterface {
             }
 
         }
+    }
+
+    _mimicIO(input){
+        console.log("");
+        this._printChatbox(6);
+        console.log(this._game.input(input));
     }
 
 

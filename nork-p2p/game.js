@@ -81,6 +81,16 @@ class Game {
             this._ui.message(message.data);
             this._peer.broadcast(message);
             return message.data.username + ": "+ message.data.message + '\n' + this.brief();
+        case 'alert' :
+            var message = {
+                command: 'alert',
+                data: {
+                    username: this._username,
+                    message: text.slice(1).join(' ')
+                }
+            }
+            this._peer.broadcast(message);
+            return "ALERT - " + message.data.username + ": "+ message.data.message + '\n' + this.brief();
         default :
             return 'That command was not understood';
         }
@@ -184,6 +194,9 @@ class Game {
         switch(message.command){
             case 'chatbox':
                 this.game._ui.message(message.data);
+                break;
+            case 'alert':
+                this.game._ui.alert(message.data);
                 break;
             default:
                 break;
